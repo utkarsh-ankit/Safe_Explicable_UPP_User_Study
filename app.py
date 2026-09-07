@@ -23,7 +23,7 @@ from study.database import (
     save_trial,
     submit_sanity_check,
 )
-from study.domains import get_domain_config, office_config, search_config
+from study.domains import get_domain_config
 from study.scoring import score_trajectory
 
 
@@ -98,13 +98,7 @@ def create_app(test_config: dict | None = None) -> Flask:
         participant_id = int(participant["id"])
         if participant_failed_sanity(participant_id):
             return redirect(url_for("sanity_failed"))
-        condition = participant["condition_name"]
-        return render_template(
-            "instructions.html",
-            condition=condition,
-            office_legend=office_config(condition)["legend"],
-            search_legend=search_config(condition)["legend"],
-        )
+        return render_template("instructions.html", condition=participant["condition_name"])
 
     @app.route("/sanity", methods=["GET", "POST"])
     def sanity():

@@ -1,38 +1,16 @@
 {% extends "base.html" %}
 {% block title %}Instructions{% endblock %}
 {% block content %}
-<section class="card instructions_card">
+<section class="card narrow">
   <h1>Instructions</h1>
   <p>In this study, you will be presented two unrelated robotic environments where the robot has different goals to achieve. Your task is to draw the route you expect the robot to take to achive its goal.</p>
   <ol>
-    <li><i class="legend_swatch start instruction_icon"></i>Start from the cell marked S or the robot marker.</li>
+    <li>Start from the cell marked S or the robot marker.</li>
     <li>From any current cell, click on the adjacent grid cell that you expect the robot will move to next.</li>
     <li>Do this until the goal is achieved.</li>
     <li>Use Undo or Reset to revise your route.</li>
   </ol>
   <div class="notice">Base your decisions only on the information displayed in the environment.</div>
-
-  <h2>Map symbols</h2>
-  <p class="field_help">You will complete a route in each of the two environments below. Here is what each symbol means.</p>
-  <div class="legend_columns">
-    <div class="legend_group">
-      <h3>Office delivery</h3>
-      <div class="legend">
-        {% for item in office_legend %}
-        <span><i class="legend_swatch {{ item.class }}"></i>{{ item.label }}</span>
-        {% endfor %}
-      </div>
-    </div>
-    <div class="legend_group">
-      <h3>Search and reconnaissance</h3>
-      <div class="legend">
-        {% for item in search_legend %}
-        <span><i class="legend_swatch {{ item.class }}"></i>{{ item.label }}</span>
-        {% endfor %}
-      </div>
-    </div>
-  </div>
-
   <p>After the first route, you will complete a short attention check about the study and the task you just completed. The check has one attempt.</p>
   <a class="button_link" href="{{ url_for('task', task_index=0) }}">Start first task</a>
 </section>

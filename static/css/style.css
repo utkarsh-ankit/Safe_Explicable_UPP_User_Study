@@ -165,11 +165,6 @@ button.secondary { background: #e4eaf1; color: var(--ink); margin-top: 0; }
 .legend_swatch.room { background: var(--room); }
 .legend_swatch.corridor { background: var(--corridor); }
 .legend_swatch.start { border-radius: 50%; background: #1d4ed8; border: 3px solid white; box-shadow: 0 0 0 1px #1e3a8a; }
-.instructions_card { max-width: 860px; margin: 40px auto; }
-.instruction_icon { vertical-align: middle; margin-right: 8px; }
-.legend_columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 32px; margin: 14px 0 22px; }
-.legend_group h3 { margin: 0 0 10px; font-size: .95rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-.legend_group .legend { margin-bottom: 0; padding-bottom: 0; border-bottom: 0; }
 .completion_code { display: inline-block; font-size: 2rem; font-weight: 800; letter-spacing: .08em; padding: 14px 20px; background: #edf3ff; border-radius: 10px; }
 @media (max-width: 1050px) {
   .study_layout { grid-template-columns: 1fr; }
