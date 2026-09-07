@@ -32,6 +32,7 @@ h1 {
 h2 { margin-top: 0; }
 p, li { line-height: 1.55; }
 label { display: block; font-weight: 650; margin: 18px 0 7px; }
+.optional_tag { font-weight: 400; color: var(--muted); }
 input, select, textarea { width: 100%; border: 1px solid #bfc9d4; border-radius: 8px; padding: 11px 12px; font: inherit; background: white; }
 button:not(.grid_cell), .button_link { border: 0; border-radius: 9px; padding: 11px 18px; font: inherit; font-weight: 700; background: var(--accent); color: white; cursor: pointer; text-decoration: none; display: inline-block; margin-top: 18px; }
 button:not(.grid_cell):hover, .button_link:hover { background: var(--accent_dark); }

@@ -42,7 +42,7 @@
       <option value="">Select</option>
       {% for n in range(1, 8) %}<option value="{{ n }}">{{ n }}</option>{% endfor %}
     </select>
-    <label for="explanation">Why did you choose this route? (optional)</label>
+    <label for="explanation">Why did you choose this route? <span class="optional_tag">(optional)</span></label>
     <textarea id="explanation" rows="5" maxlength="4000"></textarea>
     <button id="submitButton" type="button" disabled>Submit route</button>
     <p id="submitError" class="error"></p>
