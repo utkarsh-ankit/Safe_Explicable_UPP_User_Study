@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Attention Check{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>Mid study attention check</h1>
+  <p>You have completed the first route task. Please answer the questions below before continuing to the second task.</p>
+  <div class="notice">
+    This check has one attempt. If it is not passed, your first route will be removed and your response will not be included in the research analysis.
+  </div>
+
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+  <form method="post" id="sanityForm">
+    <input type="hidden" name="challenge_token" value="{{ challenge.token }}">
+    <input type="hidden" id="responseTimeMs" name="response_time_ms" value="0">
+
+    {% for question in challenge.questions %}
+      <label for="answer_{{ question.id }}">{{ question.prompt }}</label>
+      {% if question.kind == "number" %}
+        <input
+          id="answer_{{ question.id }}"
+          name="answer_{{ question.id }}"
+          type="number"
+          inputmode="numeric"
+          autocomplete="off"
+          required
+        >
+      {% else %}
+        <select id="answer_{{ question.id }}" name="answer_{{ question.id }}" required>
+          {% for option in question.options %}
+            <option value="{{ option.value }}">{{ option.label }}</option>
+          {% endfor %}
+        </select>
+      {% endif %}
+    {% endfor %}
+
+    <div class="bot_trap" aria-hidden="true">
+      <label for="website">Leave this field empty</label>
+      <input id="website" name="website" type="text" tabindex="-1" autocomplete="off">
+    </div>
+
+    <button type="submit">Submit attention check</button>
+  </form>
+</section>
+<script>
+  const sanityStartedAt = performance.now();
+  document.getElementById("sanityForm").addEventListener("submit", () => {
+    document.getElementById("responseTimeMs").value = Math.round(
+      performance.now() - sanityStartedAt
+    );
+  });
+</script>
+{% endblock %}

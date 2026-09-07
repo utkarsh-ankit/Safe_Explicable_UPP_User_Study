@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Instructions{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>Instructions</h1>
+  <p>In this study, you will be presented two unrelated robotic environments where the robot has different goals to achieve. Your task is to draw the route you expect the robot to take to achive its goal.</p>
+  <ol>
+    <li>Start from the cell marked S or the robot marker.</li>
+    <li>From any current cell, click on the adjacent grid cell that you expect the robot will move to next.</li>
+    <li>Do this until the goal is achieved.</li>
+    <li>Use Undo or Reset to revise your route.</li>
+  </ol>
+  <div class="notice">Base your decisions only on the information displayed in the environment.</div>
+  <p>After the first route, you will complete a short attention check about the study and the task you just completed. The check has one attempt.</p>
+  <a class="button_link" href="{{ url_for('task', task_index=0) }}">Start first task</a>
+</section>
+{% endblock %}
