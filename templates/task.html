@@ -23,6 +23,11 @@
   </div>
 
   <aside class="card controls_card">
+    <div class="legend">
+      {% for item in config.legend %}
+      <span><i class="legend_swatch {{ item.class }}"></i>{{ item.label }}</span>
+      {% endfor %}
+    </div>
     <h2>Your route</h2>
     <div id="routeSummary" class="route_summary"></div>
     <div class="button_row">
@@ -41,11 +46,6 @@
     <textarea id="explanation" rows="5" maxlength="4000"></textarea>
     <button id="submitButton" type="button" disabled>Submit route</button>
     <p id="submitError" class="error"></p>
-    <div class="legend">
-      {% for item in config.legend %}
-      <span><i class="legend_swatch {{ item.class }}"></i>{{ item.label }}</span>
-      {% endfor %}
-    </div>
   </aside>
 </section>
 <script>

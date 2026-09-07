@@ -136,7 +136,7 @@ button.secondary { background: #e4eaf1; color: var(--ink); margin-top: 0; }
 .controls_card { position: sticky; top: 18px; }
 .button_row { display: flex; gap: 9px; }
 .route_summary { color: var(--muted); min-height: 42px; }
-.legend { display: grid; gap: 8px; margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); font-size: .9rem; }
+.legend { display: grid; gap: 8px; margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid var(--line); font-size: .9rem; }
 .legend span { display: flex; align-items: center; gap: 8px; }
 .legend_swatch { width: 20px; height: 20px; border: 1px solid #596675; display: inline-block; flex: 0 0 20px; }
 .legend_swatch.busy { background: var(--busy); }
