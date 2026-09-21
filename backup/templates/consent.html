@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Consent{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>Consent</h1>
+
+  <div class="researcher_info">
+  <p><strong>Research Lab:</strong> Cooperative Robotic Systems (CRS) Lab</p>
+
+  <p>
+    <strong>Researchers:</strong><br>
+    Akkamahadevi Hanni,
+    <a href="mailto:RESEARCHER_ONE_EMAIL">ahanni@asu.edu</a><br>
+
+    Utkarsh Ankit,
+    <a href="mailto:RESEARCHER_TWO_EMAIL">uankit@asu.edu</a>
+  </p>
+</div>
+
+  <p>This study asks you to draw routes for a robot in two simulated environments. Your route choices, response times, confidence ratings, and written explanations will be recorded for research.</p>
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  <form method="post">
+    <label class="checkbox_row"><input type="checkbox" name="consent" value="yes"> I have read the information and consent to participate.</label>
+    <button type="submit">Begin</button>
+  </form>
+</section>
+{% endblock %}

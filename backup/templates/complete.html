@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Complete{% endblock %}
+{% block content %}
+<section class="card narrow center">
+  <h1>Study complete</h1>
+  <p>Thank you for participating.</p>
+  <p>Your completion code is:</p>
+  <div class="completion_code">{{ completion_code }}</div>
+
+  <p class="completion_note">
+  This is your unique completion code for this study.
+</p>
+</section>
+{% endblock %}

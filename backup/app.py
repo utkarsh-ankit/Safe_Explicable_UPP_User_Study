@@ -12,26 +12,16 @@ from study.database import (
     create_or_get_participant,
     discard_participant_study_data,
     export_rows,
-    get_or_create_comparison_order,
     get_or_create_sanity_challenge,
     get_participant,
-    has_comparison,
     has_failed_sanity,
     has_passed_sanity,
     init_db,
     mark_consent,
     invalidate_completion_code,
-    save_comparison,
     save_survey,
     save_trial,
     submit_sanity_check,
-)
-from study.comparison import (
-    CHOICE_PROMPT,
-    RATING_PROMPT,
-    RATING_SCALE_LABELS,
-    build_slots,
-    parse_submission,
 )
 from study.domains import get_domain_config
 from study.scoring import score_trajectory
@@ -61,9 +51,6 @@ def create_app(test_config: dict | None = None) -> Flask:
 
     def participant_failed_sanity(participant_id: int) -> bool:
         return has_failed_sanity(app.config["DATABASE_PATH"], participant_id)
-
-    def participant_has_comparison(participant_id: int) -> bool:
-        return has_comparison(app.config["DATABASE_PATH"], participant_id)
 
     @app.get("/")
     def index():
@@ -122,13 +109,10 @@ def create_app(test_config: dict | None = None) -> Flask:
         participant_id = int(participant["id"])
         if participant_failed_sanity(participant_id):
             return redirect(url_for("sanity_failed"))
-        trials_done = count_trials(app.config["DATABASE_PATH"], participant_id)
-        if trials_done < 1:
+        if count_trials(app.config["DATABASE_PATH"], participant_id) < 1:
             return redirect(url_for("task", task_index=0))
-        if trials_done < 2:
-            return redirect(url_for("task", task_index=1))
         if participant_passed_sanity(participant_id):
-            return redirect(url_for("compare"))
+            return redirect(url_for("task", task_index=1))
 
         challenge = get_or_create_sanity_challenge(
             app.config["DATABASE_PATH"], participant_id
@@ -153,7 +137,7 @@ def create_app(test_config: dict | None = None) -> Flask:
                 response_time_ms,
             )
             if passed:
-                return redirect(url_for("compare"))
+                return redirect(url_for("task", task_index=1))
 
             discard_participant_study_data(
                 app.config["DATABASE_PATH"],
@@ -194,8 +178,11 @@ def create_app(test_config: dict | None = None) -> Flask:
         if task_index < 0 or task_index >= len(order):
             return redirect(url_for("survey"))
 
-        if task_index >= 1 and count_trials(app.config["DATABASE_PATH"], participant_id) < 1:
-            return redirect(url_for("task", task_index=0))
+        if task_index >= 1:
+            if count_trials(app.config["DATABASE_PATH"], participant_id) < 1:
+                return redirect(url_for("task", task_index=0))
+            if not participant_passed_sanity(participant_id):
+                return redirect(url_for("sanity"))
 
         domain = order[task_index]
         config = get_domain_config(domain, participant["condition_name"])
@@ -222,6 +209,9 @@ def create_app(test_config: dict | None = None) -> Flask:
         order = json.loads(participant["domain_order_json"])
         if task_index < 0 or task_index >= len(order):
             return jsonify({"ok": False, "error": "Invalid task index"}), 400
+        if task_index >= 1 and not participant_passed_sanity(participant_id):
+            return jsonify({"ok": False, "error": "Attention check is required"}), 403
+
         domain = order[task_index]
         trajectory = payload.get("trajectory", [])
         try:
@@ -249,60 +239,8 @@ def create_app(test_config: dict | None = None) -> Flask:
             str(payload.get("explanation", ""))[:4000],
         )
 
-        if task_index + 1 < len(order):
-            next_url = url_for("task", task_index=task_index + 1)
-        else:
-            next_url = url_for("sanity")
+        next_url = url_for("sanity") if task_index == 0 else url_for("task", task_index=task_index + 1)
         return jsonify({"ok": True, "next_url": next_url})
-
-    @app.route("/compare", methods=["GET", "POST"])
-    def compare():
-        participant = current_participant()
-        if not participant:
-            return redirect(url_for("index"))
-
-        participant_id = int(participant["id"])
-        if participant_failed_sanity(participant_id):
-            return redirect(url_for("sanity_failed"))
-
-        trials_done = count_trials(app.config["DATABASE_PATH"], participant_id)
-        if trials_done < 1:
-            return redirect(url_for("task", task_index=0))
-        if trials_done < 2:
-            return redirect(url_for("task", task_index=1))
-        if not participant_passed_sanity(participant_id):
-            return redirect(url_for("sanity"))
-
-        order = get_or_create_comparison_order(app.config["DATABASE_PATH"], participant_id)
-        error = None
-
-        if request.method == "POST":
-            payload, error = parse_submission(order, request.form)
-            if payload is not None:
-                try:
-                    response_time_ms = int(request.form.get("response_time_ms", "0"))
-                except ValueError:
-                    response_time_ms = 0
-                save_comparison(
-                    app.config["DATABASE_PATH"],
-                    participant_id,
-                    order,
-                    payload["choice_slot"],
-                    payload["choice_policy"],
-                    payload["ratings"],
-                    response_time_ms,
-                    str(request.form.get("explanation", ""))[:4000],
-                )
-                return redirect(url_for("survey"))
-
-        return render_template(
-            "compare.html",
-            slots=build_slots(order),
-            rating_prompt=RATING_PROMPT,
-            rating_scale_labels=RATING_SCALE_LABELS,
-            choice_prompt=CHOICE_PROMPT,
-            error=error,
-        )
 
     @app.route("/survey", methods=["GET", "POST"])
     def survey():
@@ -317,8 +255,6 @@ def create_app(test_config: dict | None = None) -> Flask:
             return redirect(url_for("sanity"))
         if count_trials(app.config["DATABASE_PATH"], participant_id) < 2:
             return redirect(url_for("task", task_index=1))
-        if not participant_has_comparison(participant_id):
-            return redirect(url_for("compare"))
 
         if request.method == "POST":
             answers = {

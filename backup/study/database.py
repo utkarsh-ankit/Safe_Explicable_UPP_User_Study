@@ -62,20 +62,6 @@ def init_db(path: str) -> None:
                 FOREIGN KEY(participant_id) REFERENCES participants(id)
             );
 
-            CREATE TABLE IF NOT EXISTS comparisons (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                participant_id INTEGER UNIQUE NOT NULL,
-                order_json TEXT NOT NULL,
-                choice_slot INTEGER,
-                choice_policy TEXT,
-                ratings_json TEXT,
-                response_time_ms INTEGER,
-                explanation TEXT,
-                created_at TEXT NOT NULL,
-                submitted_at TEXT,
-                FOREIGN KEY(participant_id) REFERENCES participants(id)
-            );
-
             CREATE TABLE IF NOT EXISTS sanity_checks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 participant_id INTEGER NOT NULL,
@@ -381,93 +367,14 @@ def submit_sanity_check(
         return passed
 
 
-def get_or_create_comparison_order(path: str, participant_id: int) -> list[str]:
-    """Return the stored part 2 image order, creating it on first view."""
-
-    from .comparison import build_order
-
-    with connect(path) as conn:
-        row = conn.execute(
-            "SELECT order_json FROM comparisons WHERE participant_id = ?",
-            (participant_id,),
-        ).fetchone()
-        if row is not None:
-            return list(json.loads(row["order_json"]))
-
-        order = build_order(participant_id)
-        conn.execute(
-            """
-            INSERT INTO comparisons (participant_id, order_json, created_at)
-            VALUES (?, ?, ?)
-            """,
-            (participant_id, json.dumps(order), utc_now()),
-        )
-        return order
-
-
-def save_comparison(
-    path: str,
-    participant_id: int,
-    order: list[str],
-    choice_slot: int,
-    choice_policy: str,
-    ratings: dict[str, int],
-    response_time_ms: int,
-    explanation: str,
-) -> None:
-    with connect(path) as conn:
-        conn.execute(
-            """
-            INSERT INTO comparisons (
-                participant_id, order_json, choice_slot, choice_policy,
-                ratings_json, response_time_ms, explanation, created_at, submitted_at
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(participant_id) DO UPDATE SET
-                order_json = excluded.order_json,
-                choice_slot = excluded.choice_slot,
-                choice_policy = excluded.choice_policy,
-                ratings_json = excluded.ratings_json,
-                response_time_ms = excluded.response_time_ms,
-                explanation = excluded.explanation,
-                submitted_at = excluded.submitted_at
-            """,
-            (
-                participant_id,
-                json.dumps(order),
-                int(choice_slot),
-                choice_policy,
-                json.dumps(ratings),
-                int(response_time_ms),
-                explanation,
-                utc_now(),
-                utc_now(),
-            ),
-        )
-
-
-def has_comparison(path: str, participant_id: int) -> bool:
-    with connect(path) as conn:
-        row = conn.execute(
-            """
-            SELECT 1 FROM comparisons
-            WHERE participant_id = ? AND submitted_at IS NOT NULL
-            LIMIT 1
-            """,
-            (participant_id,),
-        ).fetchone()
-        return row is not None
-
-
 def discard_participant_study_data(path: str, participant_id: int) -> None:
-    """Remove research responses after a failed attention check.
+    """Remove research responses after a failed mid study attention check.
 
     The participant row and sanity check row are retained for assignment and audit.
-    Trial trajectories, part 2 comparisons and survey responses are removed.
+    Trial trajectories and survey responses are removed.
     """
     with connect(path) as conn:
         conn.execute("DELETE FROM trials WHERE participant_id = ?", (participant_id,))
-        conn.execute("DELETE FROM comparisons WHERE participant_id = ?", (participant_id,))
         conn.execute("DELETE FROM surveys WHERE participant_id = ?", (participant_id,))
 
 def invalidate_completion_code(path: str, participant_id: int) -> None:
@@ -630,16 +537,9 @@ def export_rows(path: str) -> list[dict[str, Any]]:
                 t.response_time_ms,
                 t.confidence,
                 t.explanation,
-                c.order_json AS comparison_order_json,
-                c.choice_slot AS comparison_choice_slot,
-                c.choice_policy AS comparison_choice_policy,
-                c.ratings_json AS comparison_ratings_json,
-                c.response_time_ms AS comparison_response_time_ms,
-                c.explanation AS comparison_explanation,
                 s.answers_json
             FROM participants p
             LEFT JOIN trials t ON t.participant_id = p.id
-            LEFT JOIN comparisons c ON c.participant_id = p.id
             LEFT JOIN surveys s ON s.participant_id = p.id
             ORDER BY p.id, t.task_index
             """

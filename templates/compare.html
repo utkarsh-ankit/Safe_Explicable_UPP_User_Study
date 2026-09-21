@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}Part 2: Comparing Routes{% endblock %}
+{% block content %}
+<style>
+  .compare_intro { max-width: 980px; }
+  .compare_intro ul { margin: 10px 0 0; padding-left: 20px; }
+  .compare_grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+    margin-top: 20px;
+  }
+  @media (max-width: 1050px) {
+    .compare_grid { grid-template-columns: 1fr; }
+  }
+  .route_card { display: flex; flex-direction: column; padding: 18px; }
+  .route_name { margin: 0 0 10px; font-size: 1.15rem; }
+  .route_image { width: 100%; height: auto; display: block; border: 1px solid #dfe5ec; border-radius: 10px; background: white; }
+  .rating_block { margin-top: 14px; }
+  .rating_prompt { font-weight: 650; margin: 0 0 6px; font-size: .96rem; }
+  .stars { display: flex; flex-direction: row-reverse; justify-content: center; gap: 4px; }
+  .stars input {
+    position: absolute; width: 1px; height: 1px; opacity: 0; margin: 0; padding: 0;
+  }
+  .stars label {
+    margin: 0; font-size: 2rem; line-height: 1; color: #cfd6de; cursor: pointer;
+    transition: color .08s ease-in-out; font-weight: 400;
+  }
+  .stars label:hover,
+  .stars label:hover ~ label,
+  .stars input:checked ~ label { color: #eaa800; }
+  .stars input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  .scale_ends { display: flex; justify-content: space-between; color: var(--muted); font-size: .78rem; margin-top: 4px; }
+  .choice_row {
+    display: flex; gap: 10px; align-items: center; justify-content: center;
+    margin-top: 14px; padding: 10px; border: 1px solid #dfe5ec; border-radius: 9px; background: #f7f9fc;
+    font-weight: 650;
+  }
+  .choice_row input { width: auto; margin: 0; }
+  .compare_footer { margin-top: 20px; }
+</style>
+
+<section class="card compare_intro">
+  <div class="eyebrow">Part 2 of 2</div>
+  <h1>Comparing three robot routes</h1>
+  <p class="task_text">
+    Below are three different routes that a robot could take in the search and
+    reconnaissance environment. In every image the robot starts at <strong>S</strong>,
+    must photograph all four locations <strong>A</strong>, <strong>B</strong>,
+    <strong>C</strong> and <strong>D</strong>, and then return to <strong>S</strong>.
+    The arrows show the route the robot takes.
+  </p>
+  <ul>
+    <li>Gray cells are walls and cannot be entered.</li>
+    <li>Rubble icons mark debris that has been detected. Entering debris can leave the robot stuck.</li>
+    <li>These maps show only what the robot was able to detect, so some debris may not be shown.</li>
+    <li>The three routes are shown in no particular order and are not ranked.</li>
+  </ul>
+  <div class="notice">
+    Rate each of the three routes with stars, then choose the one route you would
+    want the robot to actually carry out. All four answers are required.
+  </div>
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+</section>
+
+<form method="post" id="compareForm">
+  <input type="hidden" id="responseTimeMs" name="response_time_ms" value="0">
+
+  <div class="compare_grid">
+    {% for slot in slots %}
+    <section class="card route_card">
+      <h2 class="route_name">{{ slot.label }}</h2>
+      <img
+        class="route_image"
+        src="{{ url_for('static', filename=slot.image) }}"
+        alt="Robot route option {{ slot.slot }}"
+      >
+
+      <div class="rating_block">
+        <p class="rating_prompt">{{ rating_prompt }}</p>
+        <div class="stars">
+          {% for value in [5, 4, 3, 2, 1] %}
+          <input
+            type="radio"
+            id="rating_{{ slot.slot }}_{{ value }}"
+            name="rating_{{ slot.slot }}"
+            value="{{ value }}"
+            required
+          >
+          <label for="rating_{{ slot.slot }}_{{ value }}" title="{{ value }} of 5 stars">&#9733;</label>
+          {% endfor %}
+        </div>
+        <div class="scale_ends">
+          <span>1 = {{ rating_scale_labels[1] }}</span>
+          <span>5 = {{ rating_scale_labels[5] }}</span>
+        </div>
+      </div>
+
+      <label class="choice_row" for="choice_{{ slot.slot }}">
+        <input type="radio" id="choice_{{ slot.slot }}" name="choice" value="{{ slot.slot }}" required>
+        Choose {{ slot.label }}
+      </label>
+    </section>
+    {% endfor %}
+  </div>
+
+  <section class="card compare_footer narrow">
+    <p class="rating_prompt">{{ choice_prompt }}</p>
+    <p class="interaction_text">Use the “Choose” button under the route you picked.</p>
+    <label for="explanation">Why did you choose that route?</label>
+    <textarea id="explanation" name="explanation" rows="4" maxlength="4000"></textarea>
+    <button type="submit">Continue to final questions</button>
+  </section>
+</form>
+
+<script>
+  const compareStartedAt = performance.now();
+  document.getElementById("compareForm").addEventListener("submit", () => {
+    document.getElementById("responseTimeMs").value = Math.round(
+      performance.now() - compareStartedAt
+    );
+  });
+</script>
+{% endblock %}

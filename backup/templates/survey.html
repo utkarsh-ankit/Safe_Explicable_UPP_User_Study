@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Final Questions{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>Final questions</h1>
+  <form method="post">
+    <label for="information_complete">Did the displays seem to contain all information needed for planning?</label>
+    <select id="information_complete" name="information_complete" required>
+      <option value="yes">Yes</option>
+      <option value="no">No</option>
+      <option value="unsure">Unsure</option>
+    </select>
+    <label for="strategy">Describe the strategy you used.</label>
+    <textarea id="strategy" name="strategy" rows="5" maxlength="4000"></textarea>
+    <label for="comments">Other comments</label>
+    <textarea id="comments" name="comments" rows="4" maxlength="4000"></textarea>
+    <button type="submit">Finish study</button>
+  </form>
+</section>
+{% endblock %}

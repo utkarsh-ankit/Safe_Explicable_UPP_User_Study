@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Join Study{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>Robot Route Study</h1>
+
+    <div class="researcher_info">
+      <p><strong>Research Lab:</strong> Cooperative Robotic Systems (CRS) Lab</p>
+
+      <p>
+        <strong>Researchers:</strong><br>
+        Akkamahadevi Hanni,
+        <a href="mailto:RESEARCHER_ONE_EMAIL">ahanni@asu.edu</a><br>
+
+        Utkarsh Ankit,
+        <a href="mailto:RESEARCHER_TWO_EMAIL">uankit@asu.edu</a>
+      </p>
+    </div>
+
+  <h2>About this study</h2>
+  <p>This study examines how people choose routes for a robot in simulated environments. You will see two maps and create the route you expect the robot to take in each map.</p>
+
+  <h2>What you will do</h2>
+  <ol>
+    <li>Read the instructions for the study.</li>
+    <li>Create a robot route in the first environment.</li>
+    <li>Complete a short attention check.</li>
+    <li>Create a robot route in the second environment.</li>
+    <li>Answer a few questions about your decisions.</li>
+  </ol>
+
+  <p>This study takes approximately 5 to 7 minutes to complete. Please complete it in one sitting using a laptop or desktop computer.</p>
+
+  <div class="notice">
+    This study contains one required attention check after the first environment. The check has one attempt. Participants who do not pass the check will not continue to the second environment. Their route responses will be removed, and no completion code will be issued.
+  </div>
+
+  <p>Your participant identifier, route choices, response times, confidence ratings, and written responses will be recorded. Do not enter your name or other personal information in the text boxes.</p>
+
+    <p>
+      Enter your MTurk Worker ID exactly as it appears in your MTurk account.
+      This identifier will be used to match your study response with your MTurk submission.
+    </p>
+
+    <form action="{{ url_for('login', condition=request.args.get('condition')) }}" method="post">
+      <label for="participant_code">MTurk Worker ID</label>
+
+      <input
+        id="participant_code"
+        name="participant_code"
+        type="text"
+        autocomplete="off"
+        required
+      >
+
+      <button type="submit">Continue</button>
+    </form>
+</section>
+{% endblock %}
