@@ -4,14 +4,22 @@
 <style>
   .compare_intro { max-width: 980px; }
   .compare_intro ul { margin: 10px 0 0; padding-left: 20px; }
+  /* Two routes on the top row, the third centred underneath them. */
   .compare_grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 18px;
     margin-top: 20px;
   }
-  @media (max-width: 1050px) {
+  .compare_grid .route_card:nth-child(3) {
+    grid-column: 1 / -1;
+    justify-self: center;
+    width: 100%;
+    max-width: calc(50% - 9px);
+  }
+  @media (max-width: 900px) {
     .compare_grid { grid-template-columns: 1fr; }
+    .compare_grid .route_card:nth-child(3) { max-width: 100%; }
   }
   .route_card { display: flex; flex-direction: column; padding: 18px; }
   .route_name { margin: 0 0 10px; font-size: 1.15rem; }
@@ -52,8 +60,8 @@
   </p>
   <ul>
     <li>Gray cells are walls and cannot be entered.</li>
-    <li>Rubble icons mark debris that has been detected. Entering debris can leave the robot stuck.</li>
-    <li>These maps show only what the robot was able to detect, so some debris may not be shown.</li>
+    <li>The icons mark debris the robot has detected. Small debris can be crossed, but a large pile cannot be passed and can leave the robot stuck part way through its route.</li>
+    <li>The map shows only what the robot was able to detect. Debris elsewhere may not appear at all, and where debris is shown the robot may not know whether it is small enough to cross.</li>
     <li>The three routes are shown in no particular order and are not ranked.</li>
   </ul>
   <div class="notice">
