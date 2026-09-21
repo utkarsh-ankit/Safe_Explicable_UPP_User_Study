@@ -33,7 +33,10 @@ RATING_SCALE_LABELS = {
     5: "Exactly what I would expect",
 }
 
-CHOICE_PROMPT = "Which single route would you want the robot to actually carry out?"
+CHOICE_PROMPT = (
+    "Rate all three routes with stars, but choose only one: the route you "
+    "would want the robot to actually carry out. All four answers are required."
+)
 
 
 def build_order(participant_id: int) -> list[str]:

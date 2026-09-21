@@ -70,10 +70,7 @@
     >
     <span>This icon marks a cell where the robot has detected debris.</span>
   </p>
-  <div class="notice">
-    Rate each of the three routes with stars, then choose the one route you would
-    want the robot to actually carry out. All four answers are required.
-  </div>
+  <div class="notice">{{ choice_prompt }}</div>
   {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
 </section>
 
@@ -119,8 +116,6 @@
   </div>
 
   <section class="card compare_footer narrow">
-    <p class="rating_prompt">{{ choice_prompt }}</p>
-    <p class="interaction_text">Use the “Choose” button under the route you picked.</p>
     <label for="explanation">Why did you choose that route?</label>
     <textarea id="explanation" name="explanation" rows="4" maxlength="4000"></textarea>
     <button type="submit">Continue to final questions</button>
