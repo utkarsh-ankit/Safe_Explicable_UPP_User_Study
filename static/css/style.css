@@ -224,3 +224,8 @@ button.secondary { background: #e4eaf1; color: var(--ink); margin-top: 0; }
   background-size: contain;
   border: 0;
 }
+
+/* Route locked: the robot has reached its goal state and cannot act further.
+   Undo and Reset remain available. */
+.study_grid.route_locked .grid_cell:not(.wall) { cursor: default; }
+.study_grid.route_locked .grid_cell.current { box-shadow: 0 0 0 3px rgba(10,125,44,.55); }

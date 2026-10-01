@@ -153,7 +153,7 @@
       const delivered = picked && key(trajectory[trajectory.length - 1]) === key(cfg.office);
       return {
         complete: delivered,
-        text: delivered ? "Coffee collected and delivered." : picked ? "Coffee collected. Continue to office O." : "Collect coffee from A or B, then deliver it to O.",
+        text: delivered ? "Coffee collected and delivered. The route is complete and locked." : picked ? "Coffee collected. Continue to office O." : "Collect coffee from A or B, then deliver it to O.",
       };
     }
     const targets = new Set();
@@ -164,7 +164,7 @@
     const complete = targets.size === Object.keys(cfg.photo_targets).length && home && trajectory.length > 1;
     return {
       complete,
-      text: complete ? "All four photos collected and robot returned to S." : `${targets.size}/${Object.keys(cfg.photo_targets).length} photo targets visited${targets.size === Object.keys(cfg.photo_targets).length ? ". Return to S." : "."}`,
+      text: complete ? "All four photos collected and robot returned to S. The route is complete and locked." : `${targets.size}/${Object.keys(cfg.photo_targets).length} photo targets visited${targets.size === Object.keys(cfg.photo_targets).length ? ". Return to S." : "."}`,
     };
   }
 
@@ -181,6 +181,13 @@
   function addPoint(point) {
     const last = trajectory[trajectory.length - 1];
     if (key(point) === key(last)) return;
+    // Once the task is complete the route is locked: the robot has reached its
+    // goal state and may not act further. Undo and Reset still work.
+    if (completionState().complete) {
+      events.push({type: "move_after_complete", point, time_ms: Math.round(performance.now() - startTime)});
+      errorBox.textContent = "The robot has finished its task. Use Undo or Reset to change the route.";
+      return;
+    }
     if (!validStep(last, point)) {
       events.push({type: "invalid_click", point, time_ms: Math.round(performance.now() - startTime)});
       errorBox.textContent = "Choose one of the highlighted adjacent floor cells.";
@@ -276,11 +283,16 @@
     });
     const current = cells.get(key(trajectory[trajectory.length - 1]));
     if (current) current.classList.add("current");
-    validNextPoints().forEach((point) => {
-      const cell = cells.get(key(point));
-      if (cell) cell.classList.add("next_choice");
-    });
     const state = completionState();
+    // When the route is complete, stop offering next moves so the grid reads
+    // as locked rather than merely unresponsive.
+    if (!state.complete) {
+      validNextPoints().forEach((point) => {
+        const cell = cells.get(key(point));
+        if (cell) cell.classList.add("next_choice");
+      });
+    }
+    grid.classList.toggle("route_locked", state.complete);
     statusBox.textContent = state.text;
     routeSummary.textContent = `${trajectory.length - 1} moves selected.`;
     submitButton.disabled = !state.complete;
