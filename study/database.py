@@ -34,7 +34,9 @@ def init_db(path: str) -> None:
                 consented_at TEXT,
                 started_at TEXT NOT NULL,
                 completed_at TEXT,
-                completion_code TEXT NOT NULL
+                completion_code TEXT NOT NULL,
+                prolific_study_id TEXT,
+                prolific_session_id TEXT
             );
 
             CREATE TABLE IF NOT EXISTS trials (
@@ -94,6 +96,14 @@ def init_db(path: str) -> None:
             """
         )
 
+        # Migration for databases created before Prolific support was added.
+        existing_columns = {
+            row["name"] for row in conn.execute("PRAGMA table_info(participants)")
+        }
+        for column in ("prolific_study_id", "prolific_session_id"):
+            if column not in existing_columns:
+                conn.execute(f"ALTER TABLE participants ADD COLUMN {column} TEXT")
+
 
 def _balanced_condition(conn: sqlite3.Connection) -> str:
     counts = {"full": 0, "partial": 0}
@@ -106,7 +116,13 @@ def _balanced_condition(conn: sqlite3.Connection) -> str:
     return random.choice(candidates)
 
 
-def create_or_get_participant(path: str, participant_code: str, override: str | None = None) -> sqlite3.Row:
+def create_or_get_participant(
+    path: str,
+    participant_code: str,
+    override: str | None = None,
+    prolific_study_id: str | None = None,
+    prolific_session_id: str | None = None,
+) -> sqlite3.Row:
     participant_code = participant_code.strip()
     if not participant_code:
         participant_code = "P" + secrets.token_hex(4).upper()
@@ -116,6 +132,21 @@ def create_or_get_participant(path: str, participant_code: str, override: str | 
             "SELECT * FROM participants WHERE participant_code = ?", (participant_code,)
         ).fetchone()
         if existing:
+            # A returning participant may re-enter with a fresh Prolific session
+            # (e.g. after a browser crash); keep the newest non-empty values.
+            if prolific_study_id or prolific_session_id:
+                conn.execute(
+                    """
+                    UPDATE participants
+                    SET prolific_study_id = COALESCE(?, prolific_study_id),
+                        prolific_session_id = COALESCE(?, prolific_session_id)
+                    WHERE id = ?
+                    """,
+                    (prolific_study_id or None, prolific_session_id or None, existing["id"]),
+                )
+                return conn.execute(
+                    "SELECT * FROM participants WHERE id = ?", (existing["id"],)
+                ).fetchone()
             return existing
 
         condition = override if override in {"full", "partial"} else _balanced_condition(conn)
@@ -126,10 +157,19 @@ def create_or_get_participant(path: str, participant_code: str, override: str | 
             """
             INSERT INTO participants (
                 participant_code, condition_name, domain_order_json,
-                started_at, completion_code
-            ) VALUES (?, ?, ?, ?, ?)
+                started_at, completion_code,
+                prolific_study_id, prolific_session_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-            (participant_code, condition, json.dumps(domains), utc_now(), completion_code),
+            (
+                participant_code,
+                condition,
+                json.dumps(domains),
+                utc_now(),
+                completion_code,
+                prolific_study_id or None,
+                prolific_session_id or None,
+            ),
         )
         return conn.execute(
             "SELECT * FROM participants WHERE participant_code = ?", (participant_code,)
@@ -571,6 +611,8 @@ def export_rows(path: str) -> list[dict[str, Any]]:
             """
             SELECT
                 p.participant_code,
+                p.prolific_study_id,
+                p.prolific_session_id,
                 p.condition_name AS assigned_condition,
                 p.domain_order_json,
                 p.started_at,

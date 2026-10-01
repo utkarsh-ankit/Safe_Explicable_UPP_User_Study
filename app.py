@@ -44,6 +44,19 @@ def create_app(test_config: dict | None = None) -> Flask:
         DATABASE_PATH=os.environ.get("DATABASE_PATH", "data/study.sqlite3"),
         ADMIN_TOKEN=os.environ.get("ADMIN_TOKEN", "change_me"),
         ALLOW_CONDITION_OVERRIDE=os.environ.get("ALLOW_CONDITION_OVERRIDE", "0") == "1",
+        # Prolific: the per-study completion code from the study's
+        # "Completion codes" settings. Participants are returned to
+        # https://app.prolific.com/submissions/complete?cc=<code>
+        PROLIFIC_COMPLETION_CODE=os.environ.get("PROLIFIC_COMPLETION_CODE", ""),
+        PROLIFIC_RETURN_BASE=os.environ.get(
+            "PROLIFIC_RETURN_BASE", "https://app.prolific.com/submissions/complete"
+        ),
+        # Prolific expects participants who complete the work to be paid.
+        # Failing the attention check flags the row (sanity_passed = 0) so it
+        # can be excluded at analysis time; it does not block submission.
+        # Set to 1 only if your preregistration and Prolific study description
+        # explicitly state that a failed check voids payment.
+        REVOKE_CODE_ON_SANITY_FAIL=os.environ.get("REVOKE_CODE_ON_SANITY_FAIL", "0") == "1",
     )
     if test_config:
         app.config.update(test_config)
@@ -65,6 +78,20 @@ def create_app(test_config: dict | None = None) -> Flask:
     def participant_has_comparison(participant_id: int) -> bool:
         return has_comparison(app.config["DATABASE_PATH"], participant_id)
 
+    def prolific_params() -> dict[str, str]:
+        """Prolific appends PROLIFIC_PID / STUDY_ID / SESSION_ID to the study URL."""
+        return {
+            "prolific_pid": request.args.get("PROLIFIC_PID", "").strip(),
+            "study_id": request.args.get("STUDY_ID", "").strip(),
+            "session_id": request.args.get("SESSION_ID", "").strip(),
+        }
+
+    def prolific_return_url() -> str | None:
+        code = app.config["PROLIFIC_COMPLETION_CODE"]
+        if not code:
+            return None
+        return f"{app.config['PROLIFIC_RETURN_BASE']}?cc={code}"
+
     @app.get("/")
     def index():
         participant = current_participant()
@@ -73,14 +100,25 @@ def create_app(test_config: dict | None = None) -> Flask:
             if participant_failed_sanity(participant_id):
                 return redirect(url_for("sanity_failed"))
             return redirect(url_for("consent"))
-        return render_template("login.html")
+        return render_template("login.html", prolific=prolific_params())
 
     @app.post("/login")
     def login():
-        participant_code = request.form.get("participant_code", "").strip()
+        prolific = prolific_params()
+        # Prefer the Prolific ID from the URL; fall back to the typed field so
+        # the study can still be piloted outside Prolific.
+        participant_code = (
+            prolific["prolific_pid"]
+            or request.form.get("prolific_pid", "").strip()
+            or request.form.get("participant_code", "").strip()
+        )
         override = request.args.get("condition") if app.config["ALLOW_CONDITION_OVERRIDE"] else None
         participant = create_or_get_participant(
-            app.config["DATABASE_PATH"], participant_code, override
+            app.config["DATABASE_PATH"],
+            participant_code,
+            override,
+            prolific_study_id=prolific["study_id"] or request.form.get("study_id", "").strip(),
+            prolific_session_id=prolific["session_id"] or request.form.get("session_id", "").strip(),
         )
         session.clear()
         session["participant_id"] = int(participant["id"])
@@ -160,10 +198,11 @@ def create_app(test_config: dict | None = None) -> Flask:
                 participant_id,
             )
 
-            invalidate_completion_code(
-                app.config["DATABASE_PATH"],
-                participant_id,
-            )
+            if app.config["REVOKE_CODE_ON_SANITY_FAIL"]:
+                invalidate_completion_code(
+                    app.config["DATABASE_PATH"],
+                    participant_id,
+                )
 
             return redirect(url_for("sanity_failed"))
 
@@ -177,7 +216,13 @@ def create_app(test_config: dict | None = None) -> Flask:
         participant_id = int(participant["id"])
         if not participant_failed_sanity(participant_id):
             return redirect(url_for("instructions"))
-        return render_template("sanity_failed.html")
+        revoked = app.config["REVOKE_CODE_ON_SANITY_FAIL"]
+        return render_template(
+            "sanity_failed.html",
+            revoked=revoked,
+            completion_code=None if revoked else participant["completion_code"],
+            prolific_return_url=None if revoked else prolific_return_url(),
+        )
 
 
     @app.get("/task/<int:task_index>")
@@ -337,7 +382,11 @@ def create_app(test_config: dict | None = None) -> Flask:
             return redirect(url_for("index"))
         if participant_failed_sanity(int(participant["id"])):
             return redirect(url_for("sanity_failed"))
-        return render_template("complete.html", completion_code=participant["completion_code"])
+        return render_template(
+            "complete.html",
+            completion_code=participant["completion_code"],
+            prolific_return_url=prolific_return_url(),
+        )
 
     @app.get("/admin/export.csv")
     def export_csv():
