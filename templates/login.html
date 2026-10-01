@@ -32,22 +32,33 @@
   <p>This study takes approximately 5 to 7 minutes to complete. Please complete it in one sitting using a laptop or desktop computer.</p>
 
   <div class="notice">
-    This study contains one required attention check after the first environment. The check has one attempt. Participants who do not pass the check will not continue to the second environment. Their route responses will be removed, and no completion code will be issued.
+    This study contains one required attention check after the first environment. The check has one attempt. Participants who do not pass the check will not continue to the second environment, and their route responses will not be used in the research.
   </div>
 
   <p>Your participant identifier, route choices, response times, confidence ratings, and written responses will be recorded. Do not enter your name or other personal information in the text boxes.</p>
 
+    {% if prolific.prolific_pid %}
     <p>
-      Enter your MTurk Worker ID exactly as it appears in your MTurk account.
-      This identifier will be used to match your study response with your MTurk submission.
+      You are joining from Prolific. Your Prolific ID has been received automatically,
+      so there is nothing to type in.
+    </p>
+
+    <form action="{{ url_for('login', condition=request.args.get('condition'), PROLIFIC_PID=prolific.prolific_pid, STUDY_ID=prolific.study_id, SESSION_ID=prolific.session_id) }}" method="post">
+      <button type="submit">Begin study</button>
+    </form>
+    {% else %}
+    <p>
+      Enter your Prolific ID exactly as it appears in your Prolific account.
+      This identifier is used only to match your study response with your Prolific
+      submission so that you can be paid.
     </p>
 
     <form action="{{ url_for('login', condition=request.args.get('condition')) }}" method="post">
-      <label for="participant_code">MTurk Worker ID</label>
+      <label for="prolific_pid">Prolific ID</label>
 
       <input
-        id="participant_code"
-        name="participant_code"
+        id="prolific_pid"
+        name="prolific_pid"
         type="text"
         autocomplete="off"
         required
@@ -55,5 +66,6 @@
 
       <button type="submit">Continue</button>
     </form>
+    {% endif %}
 </section>
 {% endblock %}

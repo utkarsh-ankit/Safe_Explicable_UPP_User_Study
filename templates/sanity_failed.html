@@ -10,17 +10,35 @@ Attention Check Not Passed
   <h1>Attention check not passed</h1>
 
   <p>
-    You did not pass the required attention check.
+    You did not pass the required attention check, so the study ends here.
   </p>
 
   <p>
-    Your route responses have been removed and will not be included
-    in the research study.
+    Your route responses will not be included in the research study.
   </p>
 
+  {% if revoked %}
   <p>
     No completion code will be issued for this session.
   </p>
+  {% else %}
+  <p>
+    You will still be paid for the time you spent. Use the button below to
+    return to Prolific and register your submission.
+  </p>
+
+  {% if prolific_return_url %}
+  <p><a class="button_link" href="{{ prolific_return_url }}">Return to Prolific</a></p>
+
+  <p class="completion_note">
+    If the button does not work, your completion code is
+    <strong>{{ completion_code }}</strong>.
+  </p>
+  {% else %}
+  <p>Your completion code is:</p>
+  <div class="completion_code">{{ completion_code }}</div>
+  {% endif %}
+  {% endif %}
 
 </section>
 {% endblock %}
