@@ -6,3 +6,6 @@ __pycache__/
 data/*.sqlite3
 data/*.csv
 *.zip
+.DS_Store
+**/.DS_Store
+backup/
