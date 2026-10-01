@@ -4,9 +4,13 @@ import json
 import random
 import secrets
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
+
+# A started-but-unfinished session older than this is treated as abandoned
+# and no longer counted when balancing conditions.
+IN_PROGRESS_WINDOW_HOURS = 2
 
 
 def utc_now() -> str:
@@ -106,13 +110,56 @@ def init_db(path: str) -> None:
 
 
 def _balanced_condition(conn: sqlite3.Connection) -> str:
+    """Assign the condition that is furthest behind on *completed* surveys.
+
+    Balancing on assignment alone drifts out of 50/50 whenever participants
+    drop out or fail the attention check, because those still consume a slot.
+    Completed surveys are what gets analysed, so balance on those instead.
+
+    A participant who fails the attention check never reaches the survey, so
+    `completed_at IS NOT NULL` already means "usable completion".
+
+    In-progress participants are counted as a tiebreaker. Without this, a
+    burst of simultaneous sign-ups would all see the same completed counts
+    and be assigned at random, which is the drift we are trying to avoid.
+    Sessions older than IN_PROGRESS_WINDOW_HOURS are treated as abandoned.
+    """
     counts = {"full": 0, "partial": 0}
+    in_progress = {"full": 0, "partial": 0}
+
     for row in conn.execute(
-        "SELECT condition_name, COUNT(*) AS n FROM participants GROUP BY condition_name"
+        """
+        SELECT condition_name, COUNT(*) AS n
+        FROM participants
+        WHERE completed_at IS NOT NULL
+        GROUP BY condition_name
+        """
     ):
-        counts[row["condition_name"]] = int(row["n"])
-    minimum = min(counts.values())
-    candidates = [name for name, count in counts.items() if count == minimum]
+        if row["condition_name"] in counts:
+            counts[row["condition_name"]] = int(row["n"])
+
+    cutoff = (
+        datetime.now(timezone.utc) - timedelta(hours=IN_PROGRESS_WINDOW_HOURS)
+    ).isoformat()
+    for row in conn.execute(
+        """
+        SELECT p.condition_name, COUNT(*) AS n
+        FROM participants p
+        WHERE p.completed_at IS NULL
+          AND p.started_at >= ?
+          AND NOT EXISTS (
+              SELECT 1 FROM sanity_checks sc
+              WHERE sc.participant_id = p.id AND sc.passed = 0
+          )
+        GROUP BY p.condition_name
+        """,
+        (cutoff,),
+    ):
+        if row["condition_name"] in in_progress:
+            in_progress[row["condition_name"]] = int(row["n"])
+
+    best = min((counts[c], in_progress[c]) for c in counts)
+    candidates = [c for c in counts if (counts[c], in_progress[c]) == best]
     return random.choice(candidates)
 
 
