@@ -45,7 +45,24 @@ COLORS = {
 }
 
 
+def load_trials_csv(csv_path: str, include_all: bool):
+    import csv
+    out = []
+    with open(csv_path, newline="") as f:
+        for r in csv.DictReader(f):
+            if not r.get("trajectory_json"):
+                continue
+            if not include_all and not (r["completed_at"] and r["sanity_passed"] == "1"):
+                continue
+            out.append({"pid": r["participant_code"], "condition": r["assigned_condition"],
+                        "domain": r["domain_name"],
+                        "path": [tuple(p) for p in json.loads(r["trajectory_json"])]})
+    return out
+
+
 def load_trials(db_path: str, include_all: bool):
+    if db_path.endswith(".csv"):
+        return load_trials_csv(db_path, include_all)
     conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
     rows = conn.execute(
@@ -135,6 +152,25 @@ def draw_route(ax, path, alpha=1.0, lw=2.0):
                     zorder=5)
 
 
+def draw_overlay_colored(ax, paths, labels=None):
+    """One colour per participant, each route nudged slightly so overlaps stay visible."""
+    import numpy as np
+
+    cmap = plt.get_cmap("tab20")
+    k = max(1, len(paths))
+    for i, path in enumerate(paths):
+        color = cmap(i % 20)
+        off = (i - (k - 1) / 2) * min(0.035, 0.6 / k)
+        xs = np.array([c for _, c in path], dtype=float) + off
+        ys = np.array([r for r, _ in path], dtype=float) + off
+        ax.plot(xs, ys, color=color, lw=1.8, alpha=0.9, solid_capstyle="round",
+                label=labels[i] if labels else None, zorder=5)
+        ax.plot(xs[-1], ys[-1], marker="o", color=color, ms=4, zorder=6)
+    if labels:
+        ax.legend(fontsize=5.5, loc="upper left", bbox_to_anchor=(1.01, 1.0),
+                  frameon=False, ncol=1)
+
+
 def draw_overlay(ax, paths):
     edges = Counter()
     for path in paths:
@@ -150,7 +186,7 @@ def draw_overlay(ax, paths):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("db", help="path to study.sqlite3")
+    ap.add_argument("db", help="path to study.sqlite3 or the exported CSV")
     ap.add_argument("--out", default="route_plots")
     ap.add_argument("--all", action="store_true",
                     help="include participants who failed the check or did not finish")
@@ -171,10 +207,21 @@ def main():
         fig.savefig(os.path.join(args.out, "participants",
                                  f"{t['condition']}_{t['domain']}_{t['pid']}.png"), dpi=130)
         plt.close(fig)
-        groups.setdefault((t["domain"], t["condition"]), []).append(t["path"])
+        groups.setdefault((t["domain"], t["condition"]), []).append((t["pid"], t["path"]))
 
-    for (domain, condition), paths in sorted(groups.items()):
+    for (domain, condition), items in sorted(groups.items()):
+        pids = [pid for pid, _ in items]
+        paths = [p for _, p in items]
         cfg = get_domain_config(domain, condition)
+        fig, ax = plt.subplots(figsize=(8, 6))
+        draw_map(ax, cfg)
+        draw_overlay_colored(ax, paths, [p[:8] for p in pids])
+        ax.set_title(f"{cfg['title']} — {cfg['condition_label']}  (n = {len(paths)})\n"
+                     "one colour per participant; dot = end of route", fontsize=10)
+        fig.tight_layout()
+        fig.savefig(os.path.join(args.out, f"overlay_colored_{domain}_{condition}.png"), dpi=170)
+        plt.close(fig)
+
         fig, ax = plt.subplots(figsize=(6, 6))
         draw_map(ax, cfg)
         draw_overlay(ax, paths)
