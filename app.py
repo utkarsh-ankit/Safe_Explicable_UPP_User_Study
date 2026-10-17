@@ -51,12 +51,9 @@ def create_app(test_config: dict | None = None) -> Flask:
         PROLIFIC_RETURN_BASE=os.environ.get(
             "PROLIFIC_RETURN_BASE", "https://app.prolific.com/submissions/complete"
         ),
-        # Prolific expects participants who complete the work to be paid.
-        # Failing the attention check flags the row (sanity_passed = 0) so it
-        # can be excluded at analysis time; it does not block submission.
-        # Set to 1 only if your preregistration and Prolific study description
-        # explicitly state that a failed check voids payment.
-        REVOKE_CODE_ON_SANITY_FAIL=os.environ.get("REVOKE_CODE_ON_SANITY_FAIL", "0") == "1",
+        # Failing the attention check ends the study, removes the participant's
+        # route data, and issues no completion code (the study's stated rule).
+        REVOKE_CODE_ON_SANITY_FAIL=os.environ.get("REVOKE_CODE_ON_SANITY_FAIL", "1") == "1",
     )
     if test_config:
         app.config.update(test_config)
